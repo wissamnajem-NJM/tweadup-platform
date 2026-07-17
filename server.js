@@ -12,8 +12,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-const fs = require('fs');
-
+// Config multer pour uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, 'public', 'uploads')),
   filename: (req, file, cb) => {
@@ -21,14 +20,20 @@ const storage = multer.diskStorage({
     cb(null, unique + '-' + file.originalname.replace(/\s+/g, '_'));
   }
 });
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB max
 
+// Creer dossier uploads si pas exist
+const fs = require('fs');
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+// Servir les fichiers statiques (frontend + uploads)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
+// ============================================
+// MIDDLEWARE AUTH
+// ============================================
 function authMiddleware(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token manquant' });
@@ -45,6 +50,11 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
+// ============================================
+// AUTH - INSCRIPTION / CONNEXION
+// ============================================
+
+// Inscription
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, nom, prenom } = req.body;
   try {
@@ -63,10 +73,14 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Connexion
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   try {
+    // Admin fixe
     if (email === process.env.ADMIN_EMAIL) {
+      const match = await bcrypt.compare(password, await bcrypt.hash(process.env.ADMIN_PASSWORD, 10));
+      // Verification directe pour l'admin
       const isAdmin = password === process.env.ADMIN_PASSWORD;
       if (isAdmin) {
         const token = jwt.sign({ id: 'admin-fixed', email, role: 'admin' }, process.env.JWT_SECRET);
@@ -88,6 +102,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Profil
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     if (req.user.id === 'admin-fixed') {
@@ -100,6 +115,11 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================
+// FORMATIONS
+// ============================================
+
+// Toutes les formations
 app.get('/api/formations', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM formations ORDER BY domaine, titre');
@@ -109,6 +129,7 @@ app.get('/api/formations', async (req, res) => {
   }
 });
 
+// Formation par ID
 app.get('/api/formations/:id', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM formations WHERE id = $1', [req.params.id]);
@@ -118,6 +139,11 @@ app.get('/api/formations/:id', async (req, res) => {
   }
 });
 
+// ============================================
+// COURS
+// ============================================
+
+// Cours d'une formation
 app.get('/api/formations/:id/cours', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM cours WHERE formation_id = $1 ORDER BY ordre', [req.params.id]);
@@ -127,6 +153,11 @@ app.get('/api/formations/:id/cours', async (req, res) => {
   }
 });
 
+// ============================================
+// INSCRIPTIONS
+// ============================================
+
+// Demander inscription
 app.post('/api/inscriptions', authMiddleware, async (req, res) => {
   const { formation_id } = req.body;
   try {
@@ -147,6 +178,7 @@ app.post('/api/inscriptions', authMiddleware, async (req, res) => {
   }
 });
 
+// Mes inscriptions
 app.get('/api/inscriptions/mine', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -163,6 +195,7 @@ app.get('/api/inscriptions/mine', authMiddleware, async (req, res) => {
   }
 });
 
+// Statut d'inscription
 app.get('/api/inscriptions/status/:formationId', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -175,6 +208,7 @@ app.get('/api/inscriptions/status/:formationId', authMiddleware, async (req, res
   }
 });
 
+// Admin - demandes en attente
 app.get('/api/inscriptions/attente', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -191,8 +225,9 @@ app.get('/api/inscriptions/attente', authMiddleware, adminMiddleware, async (req
   }
 });
 
+// Admin - traiter demande
 app.put('/api/inscriptions/:id/traiter', authMiddleware, adminMiddleware, async (req, res) => {
-  const { statut } = req.body;
+  const { statut } = req.body; // 'acceptee' ou 'refusee'
   try {
     const result = await pool.query(
       'UPDATE inscriptions SET statut = $1, date_traitement = NOW() WHERE id = $2 RETURNING *',
@@ -200,6 +235,7 @@ app.put('/api/inscriptions/:id/traiter', authMiddleware, adminMiddleware, async 
     );
     const insc = result.rows[0];
 
+    // Creer notification
     await pool.query(
       'INSERT INTO notifications (user_id, titre, message, type) VALUES ($1, $2, $3, $4)',
       [insc.etudiant_id,
@@ -208,6 +244,7 @@ app.put('/api/inscriptions/:id/traiter', authMiddleware, adminMiddleware, async 
        'inscription']
     );
 
+    // Si acceptee, creer progressions
     if (statut === 'acceptee') {
       const cours = await pool.query('SELECT id FROM cours WHERE formation_id = $1', [insc.formation_id]);
       for (const c of cours.rows) {
@@ -226,6 +263,11 @@ app.put('/api/inscriptions/:id/traiter', authMiddleware, adminMiddleware, async 
   }
 });
 
+// ============================================
+// PROGRESSIONS
+// ============================================
+
+// Ma progression pour une formation
 app.get('/api/progressions/:formationId', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -238,6 +280,7 @@ app.get('/api/progressions/:formationId', authMiddleware, async (req, res) => {
   }
 });
 
+// Mettre a jour progression
 app.put('/api/progressions', authMiddleware, async (req, res) => {
   const { formation_id, cours_id, statut, quiz_reussi, score_quiz } = req.body;
   try {
@@ -256,6 +299,11 @@ app.put('/api/progressions', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================
+// EXAMENS
+// ============================================
+
+// Sauvegarder resultat examen
 app.post('/api/examens', authMiddleware, async (req, res) => {
   const { formation_id, score, reussi } = req.body;
   try {
@@ -268,6 +316,7 @@ app.post('/api/examens', authMiddleware, async (req, res) => {
       [req.user.id, formation_id, `examen_${formation_id}`, score, reussi]
     );
 
+    // Si reussi, generer certificat
     if (reussi) {
       const numero = 'TW-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       await pool.query(
@@ -288,6 +337,11 @@ app.post('/api/examens', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================
+// CERTIFICATS
+// ============================================
+
+// Mes certificats
 app.get('/api/certificats', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -304,6 +358,11 @@ app.get('/api/certificats', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+// Mes notifications
 app.get('/api/notifications', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -316,6 +375,7 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
   }
 });
 
+// Marquer comme lu
 app.put('/api/notifications/:id/lu', authMiddleware, async (req, res) => {
   try {
     await pool.query('UPDATE notifications SET lu = true WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
@@ -324,6 +384,10 @@ app.put('/api/notifications/:id/lu', authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ============================================
+// ADMIN STATS
+// ============================================
 
 app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
@@ -344,6 +408,7 @@ app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) =>
   }
 });
 
+// Admin - toutes inscriptions
 app.get('/api/admin/inscriptions', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -359,6 +424,11 @@ app.get('/api/admin/inscriptions', authMiddleware, adminMiddleware, async (req, 
   }
 });
 
+// ============================================
+// ADMIN - CRUD FORMATIONS
+// ============================================
+
+// Creer une formation (admin)
 app.post('/api/admin/formations', authMiddleware, adminMiddleware, async (req, res) => {
   const { id, titre, description, domaine, image, duree, niveau, video_url } = req.body;
   try {
@@ -375,6 +445,7 @@ app.post('/api/admin/formations', authMiddleware, adminMiddleware, async (req, r
   }
 });
 
+// Supprimer une formation (admin)
 app.delete('/api/admin/formations/:id', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     await pool.query('DELETE FROM formations WHERE id = $1', [req.params.id]);
@@ -384,6 +455,7 @@ app.delete('/api/admin/formations/:id', authMiddleware, adminMiddleware, async (
   }
 });
 
+// Ajouter un cours a une formation (admin)
 app.post('/api/admin/cours', authMiddleware, adminMiddleware, async (req, res) => {
   const { id, formation_id, titre, description, contenu, video_url, pdf_url, ordre, duree } = req.body;
   try {
@@ -400,12 +472,14 @@ app.post('/api/admin/cours', authMiddleware, adminMiddleware, async (req, res) =
   }
 });
 
+// Upload fichier (PDF ou video) - admin
 app.post('/api/admin/upload', authMiddleware, adminMiddleware, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
   const fileUrl = '/uploads/' + req.file.filename;
   res.json({ url: fileUrl, filename: req.file.filename, originalname: req.file.originalname });
 });
 
+// Toutes les formations pour admin
 app.get('/api/admin/formations', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM formations ORDER BY domaine, titre');
@@ -415,6 +489,7 @@ app.get('/api/admin/formations', authMiddleware, adminMiddleware, async (req, re
   }
 });
 
+// Cours d'une formation pour admin
 app.get('/api/admin/formations/:id/cours', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM cours WHERE formation_id = $1 ORDER BY ordre', [req.params.id]);
@@ -424,6 +499,7 @@ app.get('/api/admin/formations/:id/cours', authMiddleware, adminMiddleware, asyn
   }
 });
 
+// Admin - tous certificats
 app.get('/api/admin/certificats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -438,6 +514,10 @@ app.get('/api/admin/certificats', authMiddleware, adminMiddleware, async (req, r
     res.status(500).json({ error: err.message });
   }
 });
+
+// ============================================
+// INITIALISATION - Creer tables si pas exist
+// ============================================
 
 async function initDB() {
   try {
@@ -481,6 +561,18 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    
+    // Ajouter colonnes video_url et pdf_url si elles n'existent pas (migration)
+    try {
+      await pool.query(`ALTER TABLE cours ADD COLUMN IF NOT EXISTS video_url TEXT`);
+      await pool.query(`ALTER TABLE cours ADD COLUMN IF NOT EXISTS pdf_url TEXT`);
+    } catch (e) { /* colonnes existent deja */ }
+    
+    // Ajouter colonnes video_url et pdf_url a formations si pas exist
+    try {
+      await pool.query(`ALTER TABLE formations ADD COLUMN IF NOT EXISTS video_url TEXT`);
+      await pool.query(`ALTER TABLE formations ADD COLUMN IF NOT EXISTS pdf_url TEXT`);
+    } catch (e) { /* colonnes existent deja */ }
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS inscriptions (
@@ -544,6 +636,7 @@ async function initDB() {
       )
     `);
 
+    // Inserer formations par defaut si vide
     const count = await pool.query('SELECT COUNT(*) FROM formations');
     if (parseInt(count.rows[0].count) === 0) {
       await insertDefaultFormations();
@@ -571,6 +664,10 @@ async function insertDefaultFormations() {
   }
   console.log('Formations et cours inseres');
 }
+
+// ============================================
+// LANCER SERVEUR
+// ============================================
 
 const PORT = process.env.PORT || 3000;
 
