@@ -163,6 +163,18 @@ app.get('/api/admin/certificats', authMiddleware, adminMiddleware, async (req, r
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/admin/etudiants', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.nom, p.prenom, p.email, p.created_at,
+        (SELECT COUNT(*) FROM inscriptions WHERE etudiant_id = p.id) as nb_inscriptions,
+        (SELECT COUNT(*) FROM certificats WHERE etudiant_id = p.id) as nb_certificats
+       FROM profiles p WHERE p.role = 'etudiant' ORDER BY p.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/admin/formations', authMiddleware, adminMiddleware, async (req, res) => {
   try { const result = await pool.query('INSERT INTO formations (id, titre, description, domaine, image, duree, niveau) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET titre=$2 RETURNING *', [req.body.id || ('f' + Date.now()), req.body.titre, req.body.description, req.body.domaine, req.body.image || '', req.body.duree || '50h', req.body.niveau || 'Debutant']); res.json(result.rows[0]); }
   catch (err) { res.status(500).json({ error: err.message }); }
