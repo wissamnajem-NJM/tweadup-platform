@@ -16,19 +16,17 @@
     <h1 class="page-title">Panel d'administration</h1>
     <p class="page-subtitle">Gerez les formations, les inscriptions et les certificats.</p>
 
-    <!-- Stats -->
     <div class="grid grid-5" style="margin-bottom:2rem" id="admin-stats"></div>
 
-    <!-- Tabs -->
     <div class="tabs-header">
       <button class="tab-header-btn active" onclick="showTab('inscriptions', this)">Inscriptions</button>
       <button class="tab-header-btn" onclick="showTab('formations-tab', this)">Formations</button>
       <button class="tab-header-btn" onclick="showTab('ajout-formation', this)">+ Formation</button>
       <button class="tab-header-btn" onclick="showTab('ajout-cours', this)">+ Cours</button>
+      <button class="tab-header-btn" onclick="showTab('etudiants', this)">Etudiants</button>
       <button class="tab-header-btn" onclick="showTab('certificats', this)">Certificats</button>
     </div>
 
-    <!-- Tab Inscriptions -->
     <div id="tab-inscriptions" class="tab-panel active">
       <div class="card">
         <div class="card-header">
@@ -41,7 +39,6 @@
       </div>
     </div>
 
-    <!-- Tab Formations list -->
     <div id="tab-formations-tab" class="tab-panel">
       <div class="card">
         <div class="card-header">
@@ -54,7 +51,6 @@
       </div>
     </div>
 
-    <!-- Tab Ajouter Formation -->
     <div id="tab-ajout-formation" class="tab-panel">
       <div class="card" style="max-width:700px">
         <div class="card-header">
@@ -109,8 +105,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">URL Video (YouTube, Vimeo...)</label>
-              <input type="url" class="form-input" id="f-video" placeholder="https://www.youtube.com/embed/... ou https://vimeo.com/...">
-              <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem">Lien embed YouTube ou URL directe video</p>
+              <input type="url" class="form-input" id="f-video" placeholder="https://www.youtube.com/embed/...">
             </div>
             <button type="submit" class="btn btn-success">Creer la formation</button>
           </form>
@@ -118,7 +113,6 @@
       </div>
     </div>
 
-    <!-- Tab Ajouter Cours -->
     <div id="tab-ajout-cours" class="tab-panel">
       <div class="card" style="max-width:700px">
         <div class="card-header">
@@ -157,12 +151,7 @@
               <input type="url" class="form-input" id="c-video" placeholder="https://www.youtube.com/embed/...">
             </div>
             <div class="form-group">
-              <label class="form-label">Fichier PDF</label>
-              <input type="file" class="form-input" id="c-pdf-file" accept=".pdf">
-              <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem">Upload un fichier PDF ou entrez une URL ci-dessous</p>
-            </div>
-            <div class="form-group">
-              <label class="form-label">URL PDF (si deja upload)</label>
+              <label class="form-label">URL PDF</label>
               <input type="url" class="form-input" id="c-pdf" placeholder="/uploads/mon-fichier.pdf">
             </div>
             <button type="submit" class="btn btn-purple">Ajouter le cours</button>
@@ -171,7 +160,18 @@
       </div>
     </div>
 
-    <!-- Tab Certificats -->
+    <div id="tab-etudiants" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h2>Tous les etudiants</h2>
+        </div>
+        <div class="card-body">
+          <div id="etudiants-list" class="table-wrap"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="tab-certificats" class="tab-panel">
       <div class="card">
         <div class="card-header">
@@ -215,6 +215,7 @@
       renderDemandes();
       renderFormationsList();
       renderAdminCertificats();
+      renderEtudiants();
       loadFormationsSelect();
     }
 
@@ -252,7 +253,7 @@
       }
       container.innerHTML = `
         <table class="data-table">
-          <thead><tr><th>ID</th><th>Titre</th><th>Domaine</th><th>Niveau</th><th>Duree</th><th>Video</th><th>PDF</th><th>Actions</th></tr></thead>
+          <thead><tr><th>ID</th><th>Titre</th><th>Domaine</th><th>Niveau</th><th>Duree</th><th>Actions</th></tr></thead>
           <tbody>${formations.map(f => `
             <tr>
               <td><code style="font-size:0.75rem">${f.id}</code></td>
@@ -260,11 +261,7 @@
               <td><span class="badge" style="background:var(--primary-light);color:var(--primary)">${f.domaine}</span></td>
               <td>${f.niveau}</td>
               <td>${f.duree}</td>
-              <td>${f.video_url ? '<span style="color:var(--success)">Oui</span>' : '-'}</td>
-              <td>${f.pdf_url ? '<span style="color:var(--success)">Oui</span>' : '-'}</td>
-              <td>
-                <button class="btn btn-sm btn-danger" onclick="supprimerFormation('${f.id}')">Supprimer</button>
-              </td>
+              <td><button class="btn btn-sm btn-danger" onclick="supprimerFormation('${f.id}')">Supprimer</button></td>
             </tr>
           `).join('')}</tbody>
         </table>`;
@@ -301,6 +298,28 @@
         </table>`;
     }
 
+    async function renderEtudiants() {
+      const container = document.getElementById('etudiants-list');
+      const etudiants = await apiGet('/api/admin/etudiants');
+      if (!etudiants || etudiants.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Aucun etudiant inscrit</p></div>';
+        return;
+      }
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>Nom</th><th>Email</th><th>Inscriptions</th><th>Certificats</th><th>Inscrit le</th></tr></thead>
+          <tbody>${etudiants.map(e => `
+            <tr>
+              <td><strong>${e.prenom} ${e.nom}</strong></td>
+              <td>${e.email}</td>
+              <td>${e.nb_inscriptions}</td>
+              <td>${e.nb_certificats}</td>
+              <td>${new Date(e.created_at).toLocaleDateString('fr-FR')}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
     async function traiterDemande(id, statut) {
       const result = await apiPut('/api/inscriptions/' + id + '/traiter', { statut });
       if (result) { renderDemandes(); loadAdmin(); }
@@ -308,19 +327,17 @@
     }
 
     async function supprimerFormation(id) {
-      if (!confirm('Supprimer cette formation et tous ses cours ?')) return;
+      if (!confirm('Supprimer cette formation ?')) return;
       const result = await apiDelete('/api/admin/formations/' + id);
-      if (result) { renderFormationsList(); loadAdmin(); }
+      if (result) { renderFormationsList(); }
       else alert('Erreur lors de la suppression.');
     }
 
-    // Ajouter formation
     document.getElementById('form-formation').addEventListener('submit', async function(e) {
       e.preventDefault();
       const alertBox = document.getElementById('formation-alert');
       const btn = e.target.querySelector('button[type="submit"]');
       btn.disabled = true; btn.textContent = 'Creation...';
-
       const result = await apiPost('/api/admin/formations', {
         id: document.getElementById('f-id').value || undefined,
         titre: document.getElementById('f-titre').value,
@@ -331,39 +348,22 @@
         niveau: document.getElementById('f-niveau').value,
         video_url: document.getElementById('f-video').value
       });
-
       if (result && result.id) {
-        alertBox.innerHTML = '<div class="alert alert-success">Formation creee avec succes !</div>';
+        alertBox.innerHTML = '<div class="alert alert-success">Formation creee !</div>';
         e.target.reset();
         renderFormationsList();
-        loadAdmin();
+        loadFormationsSelect();
       } else {
         alertBox.innerHTML = '<div class="alert alert-danger">' + (result?.error || 'Erreur') + '</div>';
       }
       btn.disabled = false; btn.textContent = 'Creer la formation';
     });
 
-    // Ajouter cours
     document.getElementById('form-cours').addEventListener('submit', async function(e) {
       e.preventDefault();
       const alertBox = document.getElementById('cours-alert');
       const btn = e.target.querySelector('button[type="submit"]');
       btn.disabled = true; btn.textContent = 'Ajout...';
-
-      // Upload PDF si present
-      let pdfUrl = document.getElementById('c-pdf').value;
-      const pdfFile = document.getElementById('c-pdf-file').files[0];
-      if (pdfFile && !pdfUrl) {
-        const formData = new FormData();
-        formData.append('file', pdfFile);
-        const token = getToken();
-        try {
-          const r = await fetch('/api/admin/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: formData });
-          const uploadResult = await r.json();
-          if (uploadResult.url) pdfUrl = uploadResult.url;
-        } catch(err) { console.error('Upload error', err); }
-      }
-
       const formationId = document.getElementById('c-formation').value;
       const ordre = parseInt(document.getElementById('c-ordre').value);
       const result = await apiPost('/api/admin/cours', {
@@ -373,13 +373,12 @@
         description: document.getElementById('c-description').value,
         contenu: document.getElementById('c-contenu').value,
         video_url: document.getElementById('c-video').value,
-        pdf_url: pdfUrl,
+        pdf_url: document.getElementById('c-pdf').value,
         ordre: ordre,
         duree: '45min'
       });
-
       if (result && result.id) {
-        alertBox.innerHTML = '<div class="alert alert-success">Cours ajoute avec succes !</div>';
+        alertBox.innerHTML = '<div class="alert alert-success">Cours ajoute !</div>';
         e.target.reset();
       } else {
         alertBox.innerHTML = '<div class="alert alert-danger">' + (result?.error || 'Erreur') + '</div>';
@@ -392,15 +391,6 @@
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       if (btn) btn.classList.add('active');
       document.getElementById('tab-' + tab).classList.add('active');
-    }
-
-    // API delete helper
-    async function apiDelete(path) {
-      const token = getToken();
-      try {
-        const r = await fetch(path, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
-        return await r.json();
-      } catch(e) { return null; }
     }
 
     loadAdmin();
