@@ -562,13 +562,13 @@ async function initDB() {
       )
     `);
     
-    -- Ajouter colonnes video_url et pdf_url si elles n'existent pas (migration)
+    // Ajouter colonnes video_url et pdf_url si elles n'existent pas (migration)
     try {
       await pool.query(`ALTER TABLE cours ADD COLUMN IF NOT EXISTS video_url TEXT`);
       await pool.query(`ALTER TABLE cours ADD COLUMN IF NOT EXISTS pdf_url TEXT`);
     } catch (e) { /* colonnes existent deja */ }
     
-    -- Ajouter colonnes video_url et pdf_url a formations si pas exist
+     // Ajouter colonnes video_url et pdf_url a formations si pas exist
     try {
       await pool.query(`ALTER TABLE formations ADD COLUMN IF NOT EXISTS video_url TEXT`);
       await pool.query(`ALTER TABLE formations ADD COLUMN IF NOT EXISTS pdf_url TEXT`);
