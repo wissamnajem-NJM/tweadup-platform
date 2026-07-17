@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration - Tweadup</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container" id="navbar-container"></div>
+    <div class="mobile-menu" id="mobile-menu"></div>
+  </nav>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+    <h1 class="page-title">Panel d'administration</h1>
+    <p class="page-subtitle">Gerez les formations, les inscriptions et les certificats.</p>
+
+    <!-- Stats -->
+    <div class="grid grid-5" style="margin-bottom:2rem" id="admin-stats"></div>
+
+    <!-- Tabs -->
+    <div class="tabs-header">
+      <button class="tab-header-btn active" onclick="showTab('inscriptions', this)">Inscriptions</button>
+      <button class="tab-header-btn" onclick="showTab('formations-tab', this)">Formations</button>
+      <button class="tab-header-btn" onclick="showTab('ajout-formation', this)">+ Formation</button>
+      <button class="tab-header-btn" onclick="showTab('ajout-cours', this)">+ Cours</button>
+      <button class="tab-header-btn" onclick="showTab('certificats', this)">Certificats</button>
+    </div>
+
+    <!-- Tab Inscriptions -->
+    <div id="tab-inscriptions" class="tab-panel active">
+      <div class="card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h2>Demandes d'inscription</h2>
+        </div>
+        <div class="card-body">
+          <div id="demandes-list" class="table-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Formations list -->
+    <div id="tab-formations-tab" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <h2>Toutes les formations</h2>
+        </div>
+        <div class="card-body">
+          <div id="formations-list-admin" class="table-wrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Ajouter Formation -->
+    <div id="tab-ajout-formation" class="tab-panel">
+      <div class="card" style="max-width:700px">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <h2>Ajouter une formation</h2>
+        </div>
+        <div class="card-body">
+          <div id="formation-alert"></div>
+          <form id="form-formation">
+            <div class="form-row">
+              <div class="form-group" style="flex:2">
+                <label class="form-label">Titre *</label>
+                <input type="text" class="form-input" id="f-titre" required placeholder="ex: Developpement Web Full Stack">
+              </div>
+              <div class="form-group" style="flex:1">
+                <label class="form-label">ID unique</label>
+                <input type="text" class="form-input" id="f-id" placeholder="ex: f31 (auto si vide)">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description *</label>
+              <textarea class="form-input" id="f-description" rows="3" required placeholder="Description de la formation"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Domaine *</label>
+                <select class="form-select" id="f-domaine" required>
+                  <option value="">Choisir...</option>
+                  <option>Informatique & Developpement</option>
+                  <option>Marketing Digital</option>
+                  <option>Design & Creation</option>
+                  <option>Business & Entrepreneuriat</option>
+                  <option>Autre</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Niveau</label>
+                <select class="form-select" id="f-niveau">
+                  <option>Debutant</option>
+                  <option>Intermediaire</option>
+                  <option>Avance</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Duree</label>
+                <input type="text" class="form-input" id="f-duree" placeholder="ex: 120h" value="50h">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Image URL</label>
+              <input type="url" class="form-input" id="f-image" placeholder="https://images.unsplash.com/...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">URL Video (YouTube, Vimeo...)</label>
+              <input type="url" class="form-input" id="f-video" placeholder="https://www.youtube.com/embed/... ou https://vimeo.com/...">
+              <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem">Lien embed YouTube ou URL directe video</p>
+            </div>
+            <button type="submit" class="btn btn-success">Creer la formation</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Ajouter Cours -->
+    <div id="tab-ajout-cours" class="tab-panel">
+      <div class="card" style="max-width:700px">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <h2>Ajouter un cours</h2>
+        </div>
+        <div class="card-body">
+          <div id="cours-alert"></div>
+          <form id="form-cours">
+            <div class="form-group">
+              <label class="form-label">Formation *</label>
+              <select class="form-select" id="c-formation" required>
+                <option value="">Choisir une formation...</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex:2">
+                <label class="form-label">Titre du cours *</label>
+                <input type="text" class="form-input" id="c-titre" required placeholder="ex: Introduction au HTML">
+              </div>
+              <div class="form-group" style="flex:1">
+                <label class="form-label">Ordre (n°)</label>
+                <input type="number" class="form-input" id="c-ordre" min="1" max="20" value="1" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-input" id="c-description" rows="2" placeholder="Description du cours"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contenu du cours (HTML)</label>
+              <textarea class="form-input" id="c-contenu" rows="6" placeholder="<h1>Titre</h1><p>Contenu...</p>"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">URL Video</label>
+              <input type="url" class="form-input" id="c-video" placeholder="https://www.youtube.com/embed/...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fichier PDF</label>
+              <input type="file" class="form-input" id="c-pdf-file" accept=".pdf">
+              <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem">Upload un fichier PDF ou entrez une URL ci-dessous</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">URL PDF (si deja upload)</label>
+              <input type="url" class="form-input" id="c-pdf" placeholder="/uploads/mon-fichier.pdf">
+            </div>
+            <button type="submit" class="btn btn-purple">Ajouter le cours</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab Certificats -->
+    <div id="tab-certificats" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+          <h2>Tous les certificats</h2>
+        </div>
+        <div class="card-body">
+          <div id="admin-certificats-list" class="table-wrap"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/data.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAdmin());
+
+    async function loadAdmin() {
+      const stats = await apiGet('/api/admin/stats');
+      if (stats) {
+        document.getElementById('admin-stats').innerHTML = `
+          <div class="stat-card"><div class="stat-value" style="color:var(--primary)">${stats.totalFormations}</div><div class="stat-label">Formations</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:var(--success)">${stats.totalEtudiants}</div><div class="stat-label">Etudiants</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:var(--purple)">${stats.inscriptionsAcceptees}</div><div class="stat-label">Inscriptions</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:var(--warning)">${stats.demandesAttente}</div><div class="stat-label">En attente</div></div>
+          <div class="stat-card"><div class="stat-value" style="color:#d97706">${stats.certificatsDelivres}</div><div class="stat-label">Certificats</div></div>
+        `;
+      } else {
+        document.getElementById('admin-stats').innerHTML = `
+          <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Formations</div></div>
+          <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Etudiants</div></div>
+          <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Inscriptions</div></div>
+          <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">En attente</div></div>
+          <div class="stat-card"><div class="stat-value">-</div><div class="stat-label">Certificats</div></div>
+        `;
+      }
+
+      renderDemandes();
+      renderFormationsList();
+      renderAdminCertificats();
+      loadFormationsSelect();
+    }
+
+    async function renderDemandes() {
+      const container = document.getElementById('demandes-list');
+      const demandes = await apiGet('/api/inscriptions/attente');
+      if (!demandes || demandes.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>Aucune demande en attente</p></div>';
+        return;
+      }
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>Etudiant</th><th>Email</th><th>Formation</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>${demandes.map(d => `
+            <tr>
+              <td>${d.prenom} ${d.nom}</td>
+              <td>${d.email}</td>
+              <td>${d.formation_titre}</td>
+              <td>${new Date(d.date_demande).toLocaleDateString('fr-FR')}</td>
+              <td>
+                <button class="btn btn-sm btn-success" onclick="traiterDemande('${d.id}', 'acceptee')">Accepter</button>
+                <button class="btn btn-sm btn-danger" onclick="traiterDemande('${d.id}', 'refusee')">Refuser</button>
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
+    async function renderFormationsList() {
+      const container = document.getElementById('formations-list-admin');
+      const formations = await apiGet('/api/admin/formations');
+      if (!formations || formations.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><p>Aucune formation</p></div>';
+        return;
+      }
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>Titre</th><th>Domaine</th><th>Niveau</th><th>Duree</th><th>Video</th><th>PDF</th><th>Actions</th></tr></thead>
+          <tbody>${formations.map(f => `
+            <tr>
+              <td><code style="font-size:0.75rem">${f.id}</code></td>
+              <td><strong>${f.titre}</strong></td>
+              <td><span class="badge" style="background:var(--primary-light);color:var(--primary)">${f.domaine}</span></td>
+              <td>${f.niveau}</td>
+              <td>${f.duree}</td>
+              <td>${f.video_url ? '<span style="color:var(--success)">Oui</span>' : '-'}</td>
+              <td>${f.pdf_url ? '<span style="color:var(--success)">Oui</span>' : '-'}</td>
+              <td>
+                <button class="btn btn-sm btn-danger" onclick="supprimerFormation('${f.id}')">Supprimer</button>
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
+    async function loadFormationsSelect() {
+      const formations = await apiGet('/api/formations');
+      const select = document.getElementById('c-formation');
+      if (formations && Array.isArray(formations)) {
+        select.innerHTML = '<option value="">Choisir une formation...</option>' +
+          formations.map(f => `<option value="${f.id}">${f.titre}</option>`).join('');
+      }
+    }
+
+    async function renderAdminCertificats() {
+      const container = document.getElementById('admin-certificats-list');
+      const certs = await apiGet('/api/admin/certificats');
+      if (!certs || certs.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg><p>Aucun certificat</p></div>';
+        return;
+      }
+      container.innerHTML = `
+        <table class="data-table">
+          <thead><tr><th>Etudiant</th><th>Formation</th><th>Numero</th><th>Score</th><th>Date</th></tr></thead>
+          <tbody>${certs.map(c => `
+            <tr>
+              <td>${c.prenom} ${c.nom}</td>
+              <td>${c.formation_titre}</td>
+              <td><code style="font-size:0.75rem">${c.numero}</code></td>
+              <td>${c.score_final}%</td>
+              <td>${new Date(c.date_obtention).toLocaleDateString('fr-FR')}</td>
+            </tr>
+          `).join('')}</tbody>
+        </table>`;
+    }
+
+    async function traiterDemande(id, statut) {
+      const result = await apiPut('/api/inscriptions/' + id + '/traiter', { statut });
+      if (result) { renderDemandes(); loadAdmin(); }
+      else alert('Erreur lors du traitement.');
+    }
+
+    async function supprimerFormation(id) {
+      if (!confirm('Supprimer cette formation et tous ses cours ?')) return;
+      const result = await apiDelete('/api/admin/formations/' + id);
+      if (result) { renderFormationsList(); loadAdmin(); }
+      else alert('Erreur lors de la suppression.');
+    }
+
+    // Ajouter formation
+    document.getElementById('form-formation').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const alertBox = document.getElementById('formation-alert');
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.textContent = 'Creation...';
+
+      const result = await apiPost('/api/admin/formations', {
+        id: document.getElementById('f-id').value || undefined,
+        titre: document.getElementById('f-titre').value,
+        description: document.getElementById('f-description').value,
+        domaine: document.getElementById('f-domaine').value,
+        image: document.getElementById('f-image').value,
+        duree: document.getElementById('f-duree').value,
+        niveau: document.getElementById('f-niveau').value,
+        video_url: document.getElementById('f-video').value
+      });
+
+      if (result && result.id) {
+        alertBox.innerHTML = '<div class="alert alert-success">Formation creee avec succes !</div>';
+        e.target.reset();
+        renderFormationsList();
+        loadAdmin();
+      } else {
+        alertBox.innerHTML = '<div class="alert alert-danger">' + (result?.error || 'Erreur') + '</div>';
+      }
+      btn.disabled = false; btn.textContent = 'Creer la formation';
+    });
+
+    // Ajouter cours
+    document.getElementById('form-cours').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const alertBox = document.getElementById('cours-alert');
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.textContent = 'Ajout...';
+
+      // Upload PDF si present
+      let pdfUrl = document.getElementById('c-pdf').value;
+      const pdfFile = document.getElementById('c-pdf-file').files[0];
+      if (pdfFile && !pdfUrl) {
+        const formData = new FormData();
+        formData.append('file', pdfFile);
+        const token = getToken();
+        try {
+          const r = await fetch('/api/admin/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: formData });
+          const uploadResult = await r.json();
+          if (uploadResult.url) pdfUrl = uploadResult.url;
+        } catch(err) { console.error('Upload error', err); }
+      }
+
+      const formationId = document.getElementById('c-formation').value;
+      const ordre = parseInt(document.getElementById('c-ordre').value);
+      const result = await apiPost('/api/admin/cours', {
+        id: formationId + '_c' + ordre,
+        formation_id: formationId,
+        titre: document.getElementById('c-titre').value,
+        description: document.getElementById('c-description').value,
+        contenu: document.getElementById('c-contenu').value,
+        video_url: document.getElementById('c-video').value,
+        pdf_url: pdfUrl,
+        ordre: ordre,
+        duree: '45min'
+      });
+
+      if (result && result.id) {
+        alertBox.innerHTML = '<div class="alert alert-success">Cours ajoute avec succes !</div>';
+        e.target.reset();
+      } else {
+        alertBox.innerHTML = '<div class="alert alert-danger">' + (result?.error || 'Erreur') + '</div>';
+      }
+      btn.disabled = false; btn.textContent = 'Ajouter le cours';
+    });
+
+    function showTab(tab, btn) {
+      document.querySelectorAll('.tab-header-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    // API delete helper
+    async function apiDelete(path) {
+      const token = getToken();
+      try {
+        const r = await fetch(path, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
+        return await r.json();
+      } catch(e) { return null; }
+    }
+
+    loadAdmin();
+  </script>
+</body>
+</html>

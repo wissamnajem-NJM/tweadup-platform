@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon Espace - Tweadup</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container" id="navbar-container"></div>
+    <div class="mobile-menu" id="mobile-menu"></div>
+  </nav>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+    <h1 class="page-title">Mon Espace</h1>
+    <p class="page-subtitle">Suivez vos formations et votre progression.</p>
+
+    <div class="grid grid-2" style="grid-template-columns:2fr 1fr;gap:1.5rem">
+      <div>
+        <!-- Inscriptions -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <h2>Mes inscriptions</h2>
+          </div>
+          <div class="card-body" id="inscriptions-list"></div>
+        </div>
+
+        <!-- Progressions -->
+        <div class="card">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <h2>Mes progressions</h2>
+          </div>
+          <div class="card-body" id="progressions-list"></div>
+        </div>
+      </div>
+
+      <div>
+        <!-- Certificats -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+            <h2>Mes certificats</h2>
+          </div>
+          <div class="card-body" id="certificats-list"></div>
+        </div>
+
+        <!-- Stats rapides -->
+        <div class="card">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></svg>
+            <h2>Statistiques</h2>
+          </div>
+          <div class="card-body" id="stats-rapides"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/data.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth());
+
+    async function loadDashboard() {
+      // Load from API
+      const inscriptions = await apiGet('/api/inscriptions/mine');
+      if (inscriptions && Array.isArray(inscriptions)) {
+        localStorage.setItem('inscriptions', JSON.stringify(inscriptions.map(i => ({
+          formation_id: i.formation_id,
+          statut: i.statut,
+          formation_titre: i.formation_titre,
+          date_demande: i.date_demande
+        }))));
+      }
+
+      renderInscriptions();
+      renderProgressions();
+      renderCertificats();
+      renderStats();
+    }
+
+    function renderInscriptions() {
+      const container = document.getElementById('inscriptions-list');
+      const inscriptions = getLocalInscriptions();
+
+      if (inscriptions.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><p>Aucune inscription</p><a href="/formations.html" class="btn btn-sm btn-primary" style="margin-top:0.5rem">Parcourir les formations</a></div>';
+        return;
+      }
+
+      container.innerHTML = inscriptions.map(i => {
+        const f = FORMATIONS.find(fo => fo.id === i.formation_id);
+        let statusBadge = '';
+        if (i.statut === 'en_attente') statusBadge = '<span class="badge" style="background:var(--warning-light);color:var(--warning)">En attente</span>';
+        else if (i.statut === 'acceptee') statusBadge = '<span class="badge" style="background:var(--success-light);color:var(--success)">Acceptee</span>';
+        else if (i.statut === 'refusee') statusBadge = '<span class="badge" style="background:var(--danger-light);color:var(--danger)">Refusee</span>';
+
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--gray-100)">
+            <div style="min-width:0">
+              <a href="/formation.html?id=${i.formation_id}" style="font-weight:500;color:var(--gray-900);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f ? f.titre : (i.formation_titre || 'Formation')}</a>
+              <span style="font-size:0.75rem;color:var(--gray-400)">${f ? f.domaine : ''}</span>
+            </div>
+            ${statusBadge}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderProgressions() {
+      const container = document.getElementById('progressions-list');
+      const progressions = getLocalProgressions();
+      const formationsWithProgress = [...new Set(progressions.map(p => p.formation_id))];
+
+      if (formationsWithProgress.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>Aucune progression</p></div>';
+        return;
+      }
+
+      container.innerHTML = formationsWithProgress.map(fid => {
+        const f = FORMATIONS.find(fo => fo.id === fid);
+        const progress = getFormationProgress(fid);
+        return `
+          <div style="margin-bottom:1rem">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem">
+              <a href="/formation.html?id=${fid}" style="font-weight:500;font-size:0.875rem;color:var(--gray-900)">${f ? f.titre : fid}</a>
+              <span style="font-size:0.75rem;color:var(--gray-500)">${progress.percent}%</span>
+            </div>
+            <div class="progress-bar" style="height:6px"><div class="progress-fill ${progress.percent >= 100 ? 'success' : ''}" style="width:${progress.percent}%"></div></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCertificats() {
+      const container = document.getElementById('certificats-list');
+      const certs = getLocalCertificats();
+
+      if (certs.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:2rem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg><p>Aucun certificat</p></div>';
+        return;
+      }
+
+      container.innerHTML = certs.map(c => `
+        <div class="certificat-card" style="margin-bottom:0.75rem">
+          <div style="display:flex;align-items:center;gap:1rem">
+            <div class="certificat-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
+            <div style="min-width:0">
+              <h4 style="font-size:0.875rem;font-weight:600;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.formation_titre}</h4>
+              <p style="font-size:0.75rem;color:var(--gray-500)">Score: ${c.score_final}%</p>
+              <p style="font-size:0.6875rem;color:var(--gray-400)">${c.numero}</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderStats() {
+      const inscriptions = getLocalInscriptions();
+      const certs = getLocalCertificats();
+      const progressions = getLocalProgressions();
+      const completedCours = progressions.filter(p => p.quiz_reussi).length;
+
+      document.getElementById('stats-rapides').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div style="text-align:center;padding:0.75rem;background:var(--primary-light);border-radius:var(--radius)">
+            <div style="font-size:1.25rem;font-weight:700;color:var(--primary)">${inscriptions.length}</div>
+            <div style="font-size:0.75rem;color:var(--gray-600)">Inscriptions</div>
+          </div>
+          <div style="text-align:center;padding:0.75rem;background:var(--success-light);border-radius:var(--radius)">
+            <div style="font-size:1.25rem;font-weight:700;color:var(--success)">${completedCours}</div>
+            <div style="font-size:0.75rem;color:var(--gray-600)">Cours termines</div>
+          </div>
+          <div style="text-align:center;padding:0.75rem;background:var(--warning-light);border-radius:var(--radius)">
+            <div style="font-size:1.25rem;font-weight:700;color:var(--warning)">${certs.length}</div>
+            <div style="font-size:0.75rem;color:var(--gray-600)">Certificats</div>
+          </div>
+          <div style="text-align:center;padding:0.75rem;background:var(--purple-light);border-radius:var(--radius)">
+            <div style="font-size:1.25rem;font-weight:700;color:var(--purple)">${inscriptions.filter(i => i.statut === 'en_attente').length}</div>
+            <div style="font-size:0.75rem;color:var(--gray-600)">En attente</div>
+          </div>
+        </div>
+      `;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

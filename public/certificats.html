@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mes Certificats - Tweadup</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container" id="navbar-container"></div>
+    <div class="mobile-menu" id="mobile-menu"></div>
+  </nav>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+    <h1 class="page-title">Mes Certificats</h1>
+    <p class="page-subtitle">Vos certificats obtenus apres reussite des examens finaux.</p>
+
+    <div id="certificats-grid" class="grid grid-2"></div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="/js/data.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth());
+
+    async function loadCertificats() {
+      // Load from API
+      const certs = await apiGet('/api/certificats');
+      if (certs && Array.isArray(certs) && certs.length > 0) {
+        // Merge with local
+        const local = getLocalCertificats();
+        const merged = [...local];
+        certs.forEach(c => {
+          if (!merged.find(m => m.numero === c.numero)) {
+            merged.push({
+              numero: c.numero,
+              formation_titre: c.formation_titre,
+              score_final: c.score_final,
+              date_obtention: c.date_obtention,
+              etudiant_nom: getUser() ? (getUser().prenom + ' ' + getUser().nom) : 'Etudiant'
+            });
+          }
+        });
+        localStorage.setItem('certificats', JSON.stringify(merged));
+      }
+
+      renderCertificats();
+    }
+
+    function renderCertificats() {
+      const container = document.getElementById('certificats-grid');
+      const certs = getLocalCertificats();
+
+      if (certs.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+            <h3 style="margin-bottom:0.5rem">Aucun certificat</h3>
+            <p>Completez une formation et passez l'examen final pour obtenir votre certificat.</p>
+            <a href="/formations.html" class="btn btn-primary" style="margin-top:1rem">Parcourir les formations</a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = certs.map((c, idx) => `
+        <div class="card">
+          <div class="card-body" style="background:linear-gradient(135deg,#fefce8 0%,#fff 100%);border:2px solid #fde68a;border-radius:var(--radius-lg);padding:1.5rem">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+              <div style="width:56px;height:56px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+              </div>
+              <div style="min-width:0">
+                <h3 style="font-size:1rem;font-weight:700;color:var(--gray-900);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.formation_titre}</h3>
+                <p style="font-size:0.875rem;color:var(--gray-500)">Score: ${c.score_final}%</p>
+              </div>
+            </div>
+            <div style="background:rgba(255,255,255,0.7);padding:0.75rem;border-radius:var(--radius);margin-bottom:1rem">
+              <p style="font-size:0.6875rem;color:var(--gray-400);margin-bottom:0.25rem">Numero de certificat</p>
+              <code style="font-size:0.8125rem;color:var(--gray-800)">${c.numero}</code>
+            </div>
+            <div style="display:flex;gap:0.5rem;font-size:0.75rem;color:var(--gray-400);margin-bottom:1rem">
+              <span>Obtenu le ${new Date(c.date_obtention).toLocaleDateString('fr-FR')}</span>
+            </div>
+            <button class="btn btn-success" style="width:100%" onclick="downloadCert('${c.numero.replace(/'/g, "\\'")}', '${c.formation_titre.replace(/'/g, "\\'")}', ${c.score_final})">Telecharger PDF</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function downloadCert(numero, formationTitre, score) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape');
+      const user = getUser();
+
+      doc.setFillColor(251, 247, 237);
+      doc.rect(0, 0, 297, 210, 'F');
+
+      doc.setDrawColor(217, 119, 6);
+      doc.setLineWidth(2);
+      doc.rect(10, 10, 277, 190);
+      doc.setLineWidth(0.5);
+      doc.rect(15, 15, 267, 180);
+
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text('TWEADUP - PLATEFORME DE FORMATION EN LIGNE', 148.5, 30, { align: 'center' });
+
+      doc.setFontSize(36);
+      doc.setTextColor(180, 83, 9);
+      doc.text('CERTIFICAT', 148.5, 55, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setTextColor(80, 80, 80);
+      doc.text('DE REUSSITE', 148.5, 65, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      doc.text('Ce certificat est attribue a', 148.5, 85, { align: 'center' });
+
+      doc.setFontSize(22);
+      doc.setTextColor(31, 41, 55);
+      doc.text((user ? (user.prenom + ' ' + user.nom) : 'Etudiant').toUpperCase(), 148.5, 100, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      doc.text('Pour avoir succes complete la formation', 148.5, 115, { align: 'center' });
+
+      doc.setFontSize(16);
+      doc.setTextColor(31, 41, 55);
+      doc.text(formationTitre, 148.5, 128, { align: 'center' });
+
+      doc.setFontSize(11);
+      doc.setTextColor(80, 80, 80);
+      doc.text('Score: ' + score + '%', 148.5, 142, { align: 'center' });
+
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Numero: ' + numero, 148.5, 165, { align: 'center' });
+      doc.text('Date: ' + new Date().toLocaleDateString('fr-FR'), 148.5, 172, { align: 'center' });
+      doc.text('Certificat genere par Tweadup', 148.5, 185, { align: 'center' });
+
+      doc.save('certificat-tweadup-' + numero + '.pdf');
+    }
+
+    loadCertificats();
+  </script>
+</body>
+</html>
