@@ -28,7 +28,6 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
-// AUTH
 app.post('/api/auth/register', async (req, res) => {
   try {
     const hashed = await bcrypt.hash(req.body.password, 10);
@@ -66,7 +65,6 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// FORMATIONS
 app.get('/api/formations', async (req, res) => {
   try { const result = await pool.query('SELECT * FROM formations ORDER BY domaine, titre'); res.json(result.rows); }
   catch (err) { res.status(500).json({ error: err.message }); }
@@ -82,7 +80,6 @@ app.get('/api/formations/:id/cours', async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// INSCRIPTIONS
 app.post('/api/inscriptions', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query('INSERT INTO inscriptions (etudiant_id, formation_id, statut) VALUES ($1,$2,$3) RETURNING *', [req.user.id, req.body.formation_id, 'en_attente']);
@@ -105,7 +102,6 @@ app.put('/api/inscriptions/:id/traiter', authMiddleware, adminMiddleware, async 
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// PROGRESSIONS
 app.put('/api/progressions', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -115,7 +111,6 @@ app.put('/api/progressions', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// EXAMENS
 app.post('/api/examens', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
@@ -129,13 +124,11 @@ app.post('/api/examens', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// CERTIFICATS
 app.get('/api/certificats', authMiddleware, async (req, res) => {
   try { const result = await pool.query('SELECT c.*, f.titre as formation_titre FROM certificats c JOIN formations f ON c.formation_id = f.id WHERE c.etudiant_id = $1', [req.user.id]); res.json(result.rows); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// NOTIFICATIONS
 app.get('/api/notifications', authMiddleware, async (req, res) => {
   try { const result = await pool.query('SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]); res.json(result.rows); }
   catch (err) { res.status(500).json({ error: err.message }); }
@@ -146,7 +139,6 @@ app.put('/api/notifications/:id/lu', authMiddleware, async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ADMIN
 app.get('/api/admin/stats', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const formations = await pool.query('SELECT COUNT(*) FROM formations');
