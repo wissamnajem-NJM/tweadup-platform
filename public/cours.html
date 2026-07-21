@@ -4,286 +4,247 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cours - Tweadup</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <div class="navbar-container" id="navbar-container"></div>
-    <div class="mobile-menu" id="mobile-menu"></div>
-  </nav>
+  <div class="navbar" id="navbar"></div>
 
-  <div class="cours-header">
-    <div class="cours-header-inner">
-      <div style="display:flex;align-items:center;gap:0.75rem">
-        <a href="/formation.html?id=${formationId}" id="back-link" style="display:flex;align-items:center;gap:0.25rem;color:var(--primary);font-size:0.875rem">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-          Retour
-        </a>
-        <span id="cours-title-header" style="font-weight:600;font-size:0.9375rem"></span>
-      </div>
-      <div id="progress-header"></div>
-    </div>
-  </div>
+  <div id="content"></div>
 
-  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
-    <div class="cours-tabs" id="cours-tabs">
-      <button class="tab-btn active" id="tab-cours" onclick="showTab('cours')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        Cours
-      </button>
-      <button class="tab-btn" id="tab-video" onclick="showTab('video')" style="display:none">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Video
-      </button>
-      <button class="tab-btn" id="tab-pdf" onclick="showTab('pdf')" style="display:none">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        PDF
-      </button>
-      <button class="tab-btn" id="tab-quiz" onclick="showTab('quiz')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Quiz
-      </button>
-    </div>
-
-    <div id="panel-cours" class="tab-panel active">
-      <div class="card">
-        <div class="card-body prose" id="cours-content"></div>
-      </div>
-    </div>
-
-    <div id="panel-video" class="tab-panel">
-      <div class="card">
-        <div class="card-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <h2>Video du cours</h2>
-        </div>
-        <div class="card-body" id="video-container" style="text-align:center">
-          <p style="color:var(--gray-500)">Aucune video disponible pour ce cours.</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="panel-pdf" class="tab-panel">
-      <div class="card">
-        <div class="card-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <h2>Document PDF</h2>
-        </div>
-        <div class="card-body" id="pdf-container" style="text-align:center">
-          <p style="color:var(--gray-500)">Aucun PDF disponible pour ce cours.</p>
-        </div>
-      </div>
-    </div>
-
-    <div id="panel-quiz" class="tab-panel">
-      <div class="card">
-        <div class="card-header">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <h2>Quiz de validation</h2>
-        </div>
-        <div class="card-body" id="quiz-container">
-          <p style="color:var(--gray-500)">Lisez le cours avant de passer le quiz (15 questions, 70% minimum).</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <footer class="footer" id="footer"></footer>
-
-  <script src="/js/data.js"></script>
-  <script src="/js/app.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
-    const formationId = params.get('formation');
-    const coursId = params.get('cours');
-    if (!formationId || !coursId) { window.location.href = '/formations.html'; }
-
+    const coursId = params.get('id');
+    const formationId = coursId ? coursId.split('_')[0] : null;
     const formation = FORMATIONS.find(f => f.id === formationId);
-    const allCours = getLocalCours(formationId);
+    const allCours = formation ? getCours(formationId) : [];
     const cours = allCours.find(c => c.id === coursId);
-    if (!formation || !cours) { window.location.href = '/formations.html'; }
+    const coursIndex = allCours.findIndex(c => c.id === coursId);
+    const isLastCours = coursIndex === allCours.length - 1;
+    const user = getUser();
 
-    // Check access
-    const ordre = cours.ordre;
-    if (!isCoursAccessible(formationId, ordre)) {
-      window.location.href = '/formation.html?id=' + formationId;
-    }
+    if (!cours || !formation) {
+      document.getElementById('content').innerHTML = `
+        <div class="container" style="padding:3rem 0;text-align:center;">
+          <h1>Cours non trouve</h1>
+          <a href="formations.html" class="btn btn-primary mt-4">Retour</a>
+        </div>`;
+    } else {
+      const prog = user ? getProgression(user.id, formationId, coursId) : null;
+      let coursTermine = prog && prog.statut === 'termine';
+      let quizSubmitted = prog && prog.quiz_reussi;
+      let quizScore = prog ? prog.score_quiz : 0;
 
-    document.getElementById('back-link').href = '/formation.html?id=' + formationId;
-    document.getElementById('cours-title-header').textContent = cours.titre;
+      const questions = getQuestions(coursId, formationId);
+      let quizAnswers = {};
 
-    const progress = getFormationProgress(formationId);
-    document.getElementById('progress-header').innerHTML = `Cours ${cours.ordre}/10 <div class="progress-bar" style="width:100px;display:inline-block;vertical-align:middle;margin-left:0.5rem"><div class="progress-fill" style="width:${progress.percent}%"></div></div>`;
+      renderPage();
 
-    // Charger donnees API pour video/pdf
-    let coursData = { ...cours };
-    async function loadCoursApi() {
-      try {
-        const token = getToken();
-        const r = await fetch('/api/formations/' + formationId + '/cours', { headers: token ? { 'Authorization': 'Bearer ' + token } : {} });
-        if (r.ok) {
-          const apiCours = await r.json();
-          const found = apiCours.find(c => c.id === coursId);
-          if (found) {
-            coursData = { ...cours, video_url: found.video_url, pdf_url: found.pdf_url, contenu: found.contenu || cours.contenu };
-          }
-        }
-      } catch(e) {}
-      renderMedia();
-    }
+      function renderPage() {
+        document.getElementById('content').innerHTML = `
+          <!-- Header sticky -->
+          <div class="cours-header">
+            <div class="container cours-header-inner">
+              <div style="display:flex;align-items:center;gap:1rem;">
+                <button onclick="history.back()" class="btn btn-outline btn-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                </button>
+                <div>
+                  <p style="font-size:0.75rem;color:var(--gray-500);">${formation.titre}</p>
+                  <h1 style="font-size:1.125rem;font-weight:600;">${cours.titre}</h1>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span style="font-size:0.875rem;color:var(--gray-500);">${coursIndex + 1}/${allCours.length}</span>
+                <div class="progress-bar" style="width:100px;">
+                  <div class="progress-fill" style="width:${((coursIndex + 1) / allCours.length) * 100}%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    // Render cours content
-    document.getElementById('cours-content').innerHTML = coursData.contenu || cours.contenu;
+          <div class="container" style="padding:1.5rem;">
+            <!-- Tabs -->
+            <div class="cours-tabs">
+              <button class="tab-btn active" onclick="showTab('cours')" id="tabCours">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                Cours
+              </button>
+              <button class="tab-btn" onclick="showTab('quiz')" id="tabQuiz" ${!coursTermine ? 'disabled' : ''}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                Quiz (${questions.length} questions)
+              </button>
+            </div>
 
-    function renderMedia() {
-      // Video
-      if (coursData.video_url) {
-        document.getElementById('tab-video').style.display = '';
-        const isYoutube = coursData.video_url.includes('youtube.com') || coursData.video_url.includes('youtu.be');
-        if (isYoutube) {
-          let embedUrl = coursData.video_url;
-          if (coursData.video_url.includes('watch?v=')) embedUrl = coursData.video_url.replace('watch?v=', 'embed/');
-          if (coursData.video_url.includes('youtu.be/')) embedUrl = coursData.video_url.replace('youtu.be/', 'youtube.com/embed/');
-          document.getElementById('video-container').innerHTML = `<iframe width="100%" height="400" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:var(--radius-lg)"></iframe>`;
-        } else {
-          document.getElementById('video-container').innerHTML = `<video controls style="width:100%;border-radius:var(--radius-lg)"><source src="${coursData.video_url}">Votre navigateur ne supporte pas la video.</video>`;
-        }
-      }
-      // PDF
-      if (coursData.pdf_url) {
-        document.getElementById('tab-pdf').style.display = '';
-        document.getElementById('pdf-container').innerHTML = `
-          <embed src="${coursData.pdf_url}" type="application/pdf" width="100%" height="500px" style="border-radius:var(--radius-lg);border:1px solid var(--gray-200)" />
-          <div style="margin-top:1rem">
-            <a href="${coursData.pdf_url}" target="_blank" class="btn btn-primary">Ouvrir le PDF</a>
-            <a href="${coursData.pdf_url}" download class="btn btn-outline">Telecharger</a>
+            <!-- Contenu Cours -->
+            <div id="panelCours">
+              <div class="card">
+                <div class="card-body prose">
+                  ${cours.contenu}
+                </div>
+                <div style="padding:1rem 1.5rem;border-top:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center;">
+                  ${!coursTermine ? `
+                    <button class="btn btn-success" onclick="marquerTermine()">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Marquer comme termine
+                    </button>
+                  ` : `
+                    <span class="status-accepted">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Cours termine
+                    </span>
+                  `}
+
+                  ${quizSubmitted && quizScore >= 70 && !isLastCours ? `
+                    <a href="cours.html?id=${allCours[coursIndex + 1].id}" class="btn btn-primary">
+                      Cours suivant &rarr;
+                    </a>
+                  ` : ''}
+                  ${quizSubmitted && quizScore >= 70 && isLastCours ? `
+                    <a href="examen.html?formation=${formationId}" class="btn btn-purple">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      Examen final
+                    </a>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Quiz -->
+            <div id="panelQuiz" style="display:none;">
+              ${!quizSubmitted ? renderQuizForm() : renderQuizResult()}
+            </div>
           </div>
         `;
       }
-    }
 
-    loadCoursApi();
-
-    // Quiz data
-    let questions = [];
-    let selectedAnswers = {};
-    let quizSubmitted = false;
-
-    function loadQuiz() {
-      questions = getQuestions(coursId, formationId);
-      selectedAnswers = {};
-      quizSubmitted = false;
-      renderQuiz();
-    }
-
-    function renderQuiz() {
-      const container = document.getElementById('quiz-container');
-      if (quizSubmitted) return;
-
-      container.innerHTML = questions.map((q, idx) => {
-        const opts = q.options.map(opt => `
-          <label class="quiz-option ${selectedAnswers[q.id] === opt ? 'selected' : ''}" onclick="selectAnswer('${q.id}', '${opt.replace(/'/g, "\\'")}')">
-            <input type="radio" name="q_${q.id}" value="${opt}" ${selectedAnswers[q.id] === opt ? 'checked' : ''}>
-            <span>${opt}</span>
-          </label>
-        `).join('');
-        return `
-          <div style="margin-bottom:1.5rem">
-            <p style="font-weight:500;margin-bottom:0.75rem">${idx + 1}. ${q.question}</p>
-            <div>${opts}</div>
+      function renderQuizForm() {
+        let html = `
+          <div class="alert alert-info" style="margin-bottom:1.5rem;">
+            Repondez aux ${questions.length} questions. Il faut 70% minimum pour valider et acceder au cours suivant.
           </div>
         `;
-      }).join('') + `
-        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-200)">
-          <button class="btn btn-primary" onclick="submitQuiz()">Valider le quiz</button>
-          <span style="font-size:0.875rem;color:var(--gray-500);margin-left:1rem">${Object.keys(selectedAnswers).length}/${questions.length} reponses</span>
-        </div>
-      `;
-    }
 
-    function selectAnswer(qid, answer) {
-      if (quizSubmitted) return;
-      selectedAnswers[qid] = answer;
-      renderQuiz();
-    }
+        questions.forEach((q, i) => {
+          html += `<div class="card" style="margin-bottom:0.75rem;"><div class="card-body">`;
+          html += `<h3 style="font-weight:600;margin-bottom:1rem;"><span style="color:var(--primary);">${i + 1}.</span> ${q.question}</h3>`;
+          html += `<div style="display:flex;flex-direction:column;gap:0.5rem;">`;
+          q.options.forEach((opt, j) => {
+            html += `
+              <label class="quiz-option" id="opt_${q.id}_${j}" onclick="selectAnswer('${q.id}', ${j})">
+                <input type="radio" name="q_${q.id}" value="${j}" onchange="selectAnswer('${q.id}', ${j})" style="accent-color:var(--primary);">
+                <span>${opt}</span>
+              </label>
+            `;
+          });
+          html += `</div></div></div>`;
+        });
 
-    function submitQuiz() {
-      if (Object.keys(selectedAnswers).length < questions.length) {
-        alert('Veuillez repondre a toutes les questions.');
-        return;
-      }
-      quizSubmitted = true;
-
-      let correct = 0;
-      questions.forEach(q => {
-        if (selectedAnswers[q.id] === q.reponse_correcte) correct++;
-      });
-      const score = Math.round((correct / questions.length) * 100);
-      const passed = score >= 70;
-
-      // Save progression
-      setLocalProgression({
-        formation_id: formationId,
-        cours_id: coursId,
-        statut: 'termine',
-        quiz_reussi: passed,
-        score_quiz: score
-      });
-      apiPut('/api/progressions', { formation_id: formationId, cours_id: coursId, statut: 'termine', quiz_reussi: passed, score_quiz: score });
-
-      // Render result
-      const container = document.getElementById('quiz-container');
-      container.innerHTML = `
-        <div class="examen-result ${passed ? 'success' : 'fail'}">
-          ${passed
-            ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="16 8 9 15 6 12"/></svg><h2>Quiz reussi !</h2>'
-            : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><h2>Quiz non reussi</h2>'
-          }
-          <p style="font-size:1.125rem;margin-bottom:0.5rem">Score: <strong>${score}%</strong> (${correct}/${questions.length})</p>
-          <p style="color:var(--gray-500);margin-bottom:1.5rem">${passed ? 'Vous pouvez passer au cours suivant.' : 'Vous devez obtenir 70% minimum pour valider ce cours.'}</p>
-          ${passed
-            ? '<button onclick="nextCours()" class="btn btn-success">Cours suivant</button>'
-            : '<button onclick="retryQuiz()" class="btn btn-warning">Reessayer</button>'
-          }
-          <button onclick="showExplications()" class="btn btn-outline">Voir les reponses</button>
-        </div>
-      `;
-    }
-
-    function showExplications() {
-      const container = document.getElementById('quiz-container');
-      let html = '<h3 style="margin-bottom:1rem">Corrections</h3>';
-      questions.forEach((q, idx) => {
-        const isCorrect = selectedAnswers[q.id] === q.reponse_correcte;
         html += `
-          <div style="margin-bottom:1.25rem;padding:1rem;border:1px solid ${isCorrect ? '#86efac' : '#fca5a5'};border-radius:var(--radius);background:${isCorrect ? '#f0fdf4' : '#fef2f2'}">
-            <p style="font-weight:500;margin-bottom:0.5rem">${idx + 1}. ${q.question}</p>
-            <p style="font-size:0.875rem;margin-bottom:0.25rem">Votre reponse: <strong>${selectedAnswers[q.id]}</strong> ${isCorrect ? '<span style="color:var(--success)">Correct</span>' : '<span style="color:var(--danger)">Incorrect</span>'}</p>
-            ${!isCorrect ? `<p style="font-size:0.875rem;color:var(--success);margin-bottom:0.25rem">Bonne reponse: <strong>${q.reponse_correcte}</strong></p>` : ''}
-            <p style="font-size:0.8125rem;color:var(--gray-500)">${q.explication}</p>
+          <div style="text-align:center;margin-top:2rem;">
+            <button class="btn btn-primary btn-lg" onclick="submitQuiz()" id="btnSubmitQuiz" disabled>Valider le quiz</button>
           </div>
         `;
-      });
-      container.innerHTML = html;
-    }
-
-    function retryQuiz() { loadQuiz(); }
-
-    function nextCours() {
-      const next = allCours.find(c => c.ordre === cours.ordre + 1);
-      if (next) {
-        window.location.href = '/cours.html?formation=' + formationId + '&cours=' + next.id;
-      } else {
-        window.location.href = '/formation.html?id=' + formationId;
+        return html;
       }
-    }
 
-    function showTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      document.getElementById('tab-' + tab).classList.add('active');
-      document.getElementById('panel-' + tab).classList.add('active');
-      if (tab === 'quiz' && questions.length === 0) loadQuiz();
+      function renderQuizResult() {
+        const isSuccess = quizScore >= 70;
+        return `
+          <div class="card">
+            <div class="card-body">
+              <div class="examen-result ${isSuccess ? 'success' : 'fail'}">
+                ${isSuccess ? `
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+                  <h2>Felicitations !</h2>
+                  <p>Vous avez obtenu <strong>${quizScore}%</strong>. Vous pouvez passer au cours suivant.</p>
+                ` : `
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  <h2>Quiz non reussi</h2>
+                  <p>Vous avez obtenu <strong>${quizScore}%</strong>. Il faut 70% minimum. Reessayez !</p>
+                  <button class="btn btn-outline" onclick="resetQuiz()" style="margin-top:1rem;">Reessayer le quiz</button>
+                `}
+
+                ${isSuccess && !isLastCours ? `
+                  <a href="cours.html?id=${allCours[coursIndex + 1].id}" class="btn btn-primary" style="margin-top:1rem;">Cours suivant &rarr;</a>
+                ` : ''}
+                ${isSuccess && isLastCours ? `
+                  <a href="examen.html?formation=${formationId}" class="btn btn-purple" style="margin-top:1rem;">Passer l'examen final</a>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      window.showTab = function(tab) {
+        document.getElementById('panelCours').style.display = tab === 'cours' ? 'block' : 'none';
+        document.getElementById('panelQuiz').style.display = tab === 'quiz' ? 'block' : 'none';
+        document.getElementById('tabCours').classList.toggle('active', tab === 'cours');
+        document.getElementById('tabQuiz').classList.toggle('active', tab === 'quiz');
+      };
+
+      window.selectAnswer = function(qId, optIndex) {
+        quizAnswers[qId] = optIndex;
+        // Update visual
+        questions.forEach(q => {
+          q.options.forEach((_, j) => {
+            const el = document.getElementById(`opt_${q.id}_${j}`);
+            if (el) el.classList.remove('selected');
+          });
+        });
+        const selected = document.getElementById(`opt_${qId}_${optIndex}`);
+        if (selected) selected.classList.add('selected');
+
+        document.getElementById('btnSubmitQuiz').disabled = Object.keys(quizAnswers).length < questions.length;
+      };
+
+      window.submitQuiz = function() {
+        let correct = 0;
+        questions.forEach(q => {
+          const selectedIdx = quizAnswers[q.id];
+          if (q.options[selectedIdx] === q.reponse_correcte) correct++;
+        });
+        quizScore = Math.round((correct / questions.length) * 100);
+        quizSubmitted = true;
+
+        if (user) {
+          saveProgression(user.id, formationId, coursId, {
+            statut: 'termine',
+            quiz_reussi: quizScore >= 70,
+            score_quiz: quizScore,
+            date_completion: new Date().toISOString()
+          });
+
+          if (quizScore >= 70) {
+            addNotification(user.id, 'Quiz reussi !', `Vous avez obtenu ${quizScore}% au quiz de "${cours.titre}".`, 'quiz');
+          }
+        }
+
+        showTab('quiz');
+        document.getElementById('panelQuiz').innerHTML = renderQuizResult();
+      };
+
+      window.resetQuiz = function() {
+        quizAnswers = {};
+        quizSubmitted = false;
+        quizScore = 0;
+        showTab('quiz');
+        document.getElementById('panelQuiz').innerHTML = renderQuizForm();
+      };
+
+      window.marquerTermine = function() {
+        if (!user) return;
+        saveProgression(user.id, formationId, coursId, {
+          statut: 'termine',
+          quiz_reussi: false,
+          date_completion: new Date().toISOString()
+        });
+        coursTermine = true;
+        renderPage();
+      };
     }
   </script>
 </body>
