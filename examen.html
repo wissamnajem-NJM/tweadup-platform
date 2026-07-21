@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Examen Final - Tweadup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container" id="navbar-container"></div>
+    <div class="mobile-menu" id="mobile-menu"></div>
+  </nav>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+    <div id="examen-container"></div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const formationId = params.get('formation');
+    if (!formationId) { window.location.href = '/formations.html'; }
+
+    const formation = FORMATIONS.find(f => f.id === formationId);
+    if (!formation) { window.location.href = '/formations.html'; }
+
+    requireAuth();
+
+    // Check if already passed
+    const existingResult = getExamenResult(formationId);
+    if (existingResult && existingResult.reussi) {
+      document.getElementById('examen-container').innerHTML = `
+        <div class="examen-result success">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="16 8 9 15 6 12"/></svg>
+          <h2>Examen deja reussi !</h2>
+          <p>Score: ${existingResult.score}%</p>
+          <a href="certificats.html" class="btn btn-success">Voir mon certificat</a>
+        </div>
+      `;
+    } else {
+      startExamen();
+    }
+
+    let questions = [];
+    let selectedAnswers = {};
+    let examenStarted = false;
+    let examenSubmitted = false;
+
+    function startExamen() {
+      // Check progress
+      const progress = getFormationProgress(formationId);
+      if (progress.completed < progress.total) {
+        document.getElementById('examen-container').innerHTML = `
+          <div class="alert alert-warning">
+            <strong>Acces refuse</strong><br>Vous devez terminer tous les cours (${progress.completed}/${progress.total}) avant de passer l'examen final.
+            <br><a href="formation.html?id=${formationId}" class="btn btn-sm btn-primary" style="margin-top:0.5rem">Retour a la formation</a>
+          </div>
+        `;
+        return;
+      }
+
+      questions = getExamenQuestions(formationId);
+      selectedAnswers = {};
+      examenStarted = true;
+      examenSubmitted = false;
+      renderExamenIntro();
+    }
+
+    function renderExamenIntro() {
+      document.getElementById('examen-container').innerHTML = `
+        <div class="card" style="max-width:640px;margin:0 auto">
+          <div class="card-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <h2>Examen Final - ${formation.titre}</h2>
+          </div>
+          <div class="card-body" style="text-align:center">
+            <div style="width:80px;height:80px;border-radius:50%;background:var(--purple-light);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 style="margin-bottom:0.5rem">${questions.length} questions</h3>
+            <p style="color:var(--gray-500);margin-bottom:1rem">70% minimum requis pour obtenir le certificat</p>
+            <div style="display:flex;justify-content:center;gap:1.5rem;font-size:0.875rem;color:var(--gray-500);margin-bottom:1.5rem">
+              <span style="display:flex;align-items:center;gap:0.25rem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Duree illimitee</span>
+              <span style="display:flex;align-items:center;gap:0.25rem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Certificat PDF</span>
+            </div>
+            <button class="btn btn-lg btn-purple" onclick="renderExamenQuestions()">Commencer l'examen</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderExamenQuestions() {
+      const container = document.getElementById('examen-container');
+      let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+          <h1 class="page-title" style="font-size:1.25rem">Examen: ${formation.titre}</h1>
+          <span style="font-size:0.875rem;color:var(--gray-500)">Question ${Object.keys(selectedAnswers).length + 1}/${questions.length}</span>
+        </div>
+      `;
+
+      questions.forEach((q, idx) => {
+        const opts = q.options.map(opt => `
+          <label class="quiz-option ${selectedAnswers[q.id] === opt ? 'selected' : ''}" onclick="selectAnswer('${q.id}', '${opt.replace(/'/g, "\\'")}')">
+            <input type="radio" name="q_${q.id}" value="${opt}" ${selectedAnswers[q.id] === opt ? 'checked' : ''}>
+            <span>${opt}</span>
+          </label>
+        `).join('');
+
+        html += `
+          <div class="card" style="margin-bottom:1rem">
+            <div class="card-body">
+              <p style="font-weight:500;margin-bottom:0.75rem">${idx + 1}. ${q.question}</p>
+              <div>${opts}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+        <div style="position:sticky;bottom:1rem;background:var(--white);padding:1rem;border:1px solid var(--gray-200);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:0.875rem;color:var(--gray-500)">${Object.keys(selectedAnswers).length}/${questions.length} reponses</span>
+          <button class="btn btn-primary" onclick="submitExamen()">Soumettre l'examen</button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function selectAnswer(qid, answer) {
+      if (examenSubmitted) return;
+      selectedAnswers[qid] = answer;
+      renderExamenQuestions();
+    }
+
+    function submitExamen() {
+      if (Object.keys(selectedAnswers).length < questions.length) {
+        alert('Veuillez repondre a toutes les questions (' + Object.keys(selectedAnswers).length + '/' + questions.length + ').');
+        return;
+      }
+      examenSubmitted = true;
+
+      let correct = 0;
+      questions.forEach(q => {
+        if (selectedAnswers[q.id] === q.reponse_correcte) correct++;
+      });
+      const score = Math.round((correct / questions.length) * 100);
+      const passed = score >= 70;
+
+      // Save
+      const result = { score, reussi: passed, date: new Date().toISOString() };
+      setExamenResult(formationId, result);
+      apiPost('/api/examens', { formation_id: formationId, score, reussi: passed });
+
+      // Generate certificat if passed
+      let certificatNumero = '';
+      if (passed) {
+        const user = getUser();
+        certificatNumero = 'TW-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+        const cert = {
+          numero: certificatNumero,
+          formation_titre: formation.titre,
+          score_final: score,
+          date_obtention: new Date().toISOString(),
+          etudiant_nom: user ? (user.prenom + ' ' + user.nom) : 'Etudiant'
+        };
+        addLocalCertificat(cert);
+      }
+
+      // Show result
+      const container = document.getElementById('examen-container');
+      container.innerHTML = `
+        <div class="examen-result ${passed ? 'success' : 'fail'}" style="max-width:640px;margin:0 auto">
+          ${passed
+            ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="16 8 9 15 6 12"/></svg><h2>Felicitations ! Examen reussi</h2>'
+            : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><h2>Examen non reussi</h2>'
+          }
+          <p style="font-size:1.5rem;font-weight:700;margin-bottom:0.5rem">${score}%</p>
+          <p style="color:var(--gray-500);margin-bottom:1.5rem">${correct}/${questions.length} bonnes reponses</p>
+          ${passed
+            ? `<div style="margin-bottom:1rem">
+                <p style="font-size:0.875rem;color:var(--gray-600);margin-bottom:0.5rem">Votre numero de certificat:</p>
+                <code style="background:var(--gray-100);padding:0.5rem 1rem;border-radius:var(--radius);font-size:0.875rem">${certificatNumero}</code>
+              </div>
+              <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+                <button onclick="downloadCertificate()" class="btn btn-success">Telecharger le certificat PDF</button>
+                <a href="certificats.html" class="btn btn-outline">Mes certificats</a>
+              </div>`
+            : `<div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+                <button onclick="retryExamen()" class="btn btn-warning">Reessayer</button>
+                <a href="formation.html?id=${formationId}" class="btn btn-outline">Retour a la formation</a>
+              </div>`
+          }
+        </div>
+      `;
+    }
+
+    function retryExamen() {
+      selectedAnswers = {};
+      examenSubmitted = false;
+      renderExamenQuestions();
+    }
+
+    function downloadCertificate() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape');
+      const user = getUser();
+      const cert = getLocalCertificats().find(c => c.formation_titre === formation.titre);
+      const numero = cert ? cert.numero : 'TW-UNKNOWN';
+
+      // Background
+      doc.setFillColor(251, 247, 237);
+      doc.rect(0, 0, 297, 210, 'F');
+
+      // Border
+      doc.setDrawColor(217, 119, 6);
+      doc.setLineWidth(2);
+      doc.rect(10, 10, 277, 190);
+      doc.setLineWidth(0.5);
+      doc.rect(15, 15, 267, 180);
+
+      // Header
+      doc.setFontSize(10);
+      doc.setTextColor(120, 120, 120);
+      doc.text('TWEADUP - PLATEFORME DE FORMATION EN LIGNE', 148.5, 30, { align: 'center' });
+
+      // Title
+      doc.setFontSize(36);
+      doc.setTextColor(180, 83, 9);
+      doc.text('CERTIFICAT', 148.5, 55, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setTextColor(80, 80, 80);
+      doc.text('DE REUSSITE', 148.5, 65, { align: 'center' });
+
+      // Content
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      doc.text('Ce certificat est attribue a', 148.5, 85, { align: 'center' });
+
+      doc.setFontSize(22);
+      doc.setTextColor(31, 41, 55);
+      doc.text((user ? (user.prenom + ' ' + user.nom) : 'Etudiant').toUpperCase(), 148.5, 100, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      doc.text('Pour avoir succes complete la formation', 148.5, 115, { align: 'center' });
+
+      doc.setFontSize(16);
+      doc.setTextColor(31, 41, 55);
+      doc.text(formation.titre, 148.5, 128, { align: 'center' });
+
+      // Score
+      doc.setFontSize(11);
+      doc.setTextColor(80, 80, 80);
+      doc.text('Score: ' + (getExamenResult(formationId)?.score || 0) + '%', 148.5, 142, { align: 'center' });
+
+      // Footer
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Numero: ' + numero, 148.5, 165, { align: 'center' });
+      doc.text('Date: ' + new Date().toLocaleDateString('fr-FR'), 148.5, 172, { align: 'center' });
+      doc.text('Certificat genere par Tweadup', 148.5, 185, { align: 'center' });
+
+      doc.save('certificat-tweadup-' + formationId + '.pdf');
+    }
+  </script>
+</body>
+</html>

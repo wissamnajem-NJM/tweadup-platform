@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cours - Tweadup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container" id="navbar-container"></div>
+    <div class="mobile-menu" id="mobile-menu"></div>
+  </nav>
+
+  <div class="cours-header">
+    <div class="cours-header-inner">
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <a href="#" id="back-link" style="display:flex;align-items:center;gap:0.25rem;color:var(--primary);font-size:0.875rem;text-decoration:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Retour
+        </a>
+        <span id="cours-title-header" style="font-weight:600;font-size:0.9375rem"></span>
+      </div>
+      <div id="progress-header"></div>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top:2rem;padding-bottom:4rem">
+    <div class="cours-tabs" id="cours-tabs">
+      <button class="tab-btn active" id="tab-cours" onclick="showTab('cours')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Cours
+      </button>
+      <button class="tab-btn" id="tab-video" onclick="showTab('video')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Video
+      </button>
+      <button class="tab-btn" id="tab-quiz" onclick="showTab('quiz')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Quiz
+      </button>
+    </div>
+
+    <div id="panel-cours" class="tab-panel active">
+      <div class="card">
+        <div class="card-body prose" id="cours-content"></div>
+      </div>
+    </div>
+
+    <div id="panel-video" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <h2>Video du cours</h2>
+        </div>
+        <div class="card-body" id="video-container" style="text-align:center">
+          <p style="color:var(--gray-500)">Chargement de la video...</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-quiz" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <h2>Quiz de validation</h2>
+        </div>
+        <div class="card-body" id="quiz-container">
+          <p style="color:var(--gray-500)">Lisez le cours et regardez la video avant de passer le quiz (15 questions, 70% minimum).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const formationId = params.get('formation');
+    const coursId = params.get('cours');
+    if (!formationId || !coursId) { window.location.href = '/formations.html'; }
+
+    const formation = FORMATIONS.find(f => f.id === formationId);
+    const allCours = getLocalCours(formationId);
+    const cours = allCours.find(c => c.id === coursId);
+    if (!formation || !cours) { window.location.href = '/formations.html'; }
+
+    const ordre = cours.ordre;
+    const isAdminUser = isAdmin();
+    
+    // Admin bypass - admin can access any course without inscription
+    if (!isAdminUser && !isCoursAccessible(formationId, ordre)) {
+      window.location.href = '/formation.html?id=' + formationId;
+    }
+
+    document.getElementById('back-link').href = '/formation.html?id=' + formationId;
+    document.getElementById('cours-title-header').textContent = cours.titre;
+
+    const progress = getFormationProgress(formationId);
+    document.getElementById('progress-header').innerHTML = 'Cours ' + cours.ordre + '/10 <div class="progress-bar" style="width:100px;display:inline-block;vertical-align:middle;margin-left:0.5rem"><div class="progress-fill" style="width:' + progress.percent + '%"></div></div>';
+
+    // Render cours content
+    document.getElementById('cours-content').innerHTML = cours.contenu;
+
+    // Render video
+    const videoUrl = getVideoUrl(formationId, cours.ordre);
+    if (videoUrl) {
+      document.getElementById('video-container').innerHTML = 
+        '<iframe width="100%" height="450" src="' + videoUrl + '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:var(--radius-lg)"></iframe>' +
+        '<p style="margin-top:0.75rem;color:var(--gray-500);font-size:0.875rem">Video du cours : ' + cours.titre + '</p>';
+    } else {
+      document.getElementById('video-container').innerHTML = '<p style="color:var(--gray-500)">Aucune video disponible pour ce cours.</p>';
+    }
+
+    // Quiz data
+    let questions = [];
+    let selectedAnswers = {};
+    let quizSubmitted = false;
+
+    function loadQuiz() {
+      questions = getQuestions(coursId, formationId);
+      selectedAnswers = {};
+      quizSubmitted = false;
+      renderQuiz();
+    }
+
+    function renderQuiz() {
+      const container = document.getElementById('quiz-container');
+      if (quizSubmitted) return;
+
+      container.innerHTML = questions.map((q, idx) => {
+        const opts = q.options.map(opt => {
+          const escaped = opt.replace(/'/g, "\\'");
+          return '<label class="quiz-option ' + (selectedAnswers[q.id] === opt ? 'selected' : '') + '" onclick="selectAnswer(\'' + q.id + '\', \'' + escaped + '\')">' +
+            '<input type="radio" name="q_' + q.id + '" value="' + opt + '" ' + (selectedAnswers[q.id] === opt ? 'checked' : '') + '>' +
+            '<span>' + opt + '</span></label>';
+        }).join('');
+        return '<div style="margin-bottom:1.5rem"><p style="font-weight:500;margin-bottom:0.75rem">' + (idx + 1) + '. ' + q.question + '</p><div>' + opts + '</div></div>';
+      }).join('') + '<div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-200)">' +
+        '<button class="btn btn-primary" onclick="submitQuiz()">Valider le quiz</button>' +
+        '<span style="font-size:0.875rem;color:var(--gray-500);margin-left:1rem">' + Object.keys(selectedAnswers).length + '/' + questions.length + ' reponses</span></div>';
+    }
+
+    function selectAnswer(qid, answer) {
+      if (quizSubmitted) return;
+      selectedAnswers[qid] = answer;
+      renderQuiz();
+    }
+
+    function submitQuiz() {
+      if (Object.keys(selectedAnswers).length < questions.length) {
+        alert('Veuillez repondre a toutes les questions.');
+        return;
+      }
+      quizSubmitted = true;
+
+      let correct = 0;
+      questions.forEach(q => {
+        if (selectedAnswers[q.id] === q.reponse_correcte) correct++;
+      });
+      const score = Math.round((correct / questions.length) * 100);
+      const passed = score >= 70;
+
+      // Save progression
+      setLocalProgression({
+        formation_id: formationId,
+        cours_id: coursId,
+        statut: 'termine',
+        quiz_reussi: passed,
+        score_quiz: score
+      });
+      apiPut('/api/progressions', { formation_id: formationId, cours_id: coursId, statut: 'termine', quiz_reussi: passed, score_quiz: score });
+
+      // Render result - PAS de "Voir les reponses" si echec
+      const container = document.getElementById('quiz-container');
+      let html = '<div class="examen-result ' + (passed ? 'success' : 'fail') + '">';
+      if (passed) {
+        html += '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="16 8 9 15 6 12"/></svg><h2>Quiz reussi !</h2>';
+      } else {
+        html += '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><h2>Quiz non reussi</h2>';
+      }
+      html += '<p style="font-size:1.125rem;margin-bottom:0.5rem">Score: <strong>' + score + '%</strong> (' + correct + '/' + questions.length + ')</p>';
+      html += '<p style="color:var(--gray-500);margin-bottom:1.5rem">';
+      if (passed) {
+        html += 'Bravo ! Vous pouvez passer au cours suivant.';
+      } else {
+        html += 'Vous devez obtenir 70% minimum. Reessayez apres avoir revise le cours et la video.';
+      }
+      html += '</p>';
+      if (passed) {
+        html += '<button onclick="nextCours()" class="btn btn-success">Cours suivant</button>';
+      } else {
+        html += '<button onclick="retryQuiz()" class="btn btn-warning">Reessayer</button>';
+      }
+      // Admin can see answers even if failed
+      if (passed || isAdminUser) {
+        html += '<button onclick="showExplications()" class="btn btn-outline" style="margin-left:0.5rem">Voir les reponses</button>';
+      }
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function showExplications() {
+      const container = document.getElementById('quiz-container');
+      let html = '<h3 style="margin-bottom:1rem">Corrections</h3>';
+      questions.forEach((q, idx) => {
+        const isCorrect = selectedAnswers[q.id] === q.reponse_correcte;
+        html += '<div style="margin-bottom:1.25rem;padding:1rem;border:1px solid ' + (isCorrect ? '#86efac' : '#fca5a5') + ';border-radius:var(--radius);background:' + (isCorrect ? '#f0fdf4' : '#fef2f2') + '">';
+        html += '<p style="font-weight:500;margin-bottom:0.5rem">' + (idx + 1) + '. ' + q.question + '</p>';
+        html += '<p style="font-size:0.875rem;margin-bottom:0.25rem">Votre reponse: <strong>' + selectedAnswers[q.id] + '</strong> ';
+        if (isCorrect) html += '<span style="color:var(--success)">Correct</span>';
+        else html += '<span style="color:var(--danger)">Incorrect</span>';
+        html += '</p>';
+        if (!isCorrect) html += '<p style="font-size:0.875rem;color:var(--success);margin-bottom:0.25rem">Bonne reponse: <strong>' + q.reponse_correcte + '</strong></p>';
+        html += '<p style="font-size:0.8125rem;color:var(--gray-500)">' + q.explication + '</p></div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function retryQuiz() { loadQuiz(); }
+
+    function nextCours() {
+      const next = allCours.find(c => c.ordre === cours.ordre + 1);
+      if (next) {
+        window.location.href = '/cours.html?formation=' + formationId + '&cours=' + next.id;
+      } else {
+        window.location.href = '/formation.html?id=' + formationId;
+      }
+    }
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('panel-' + tab).classList.add('active');
+      if (tab === 'quiz' && questions.length === 0) loadQuiz();
+    }
+  </script>
+</body>
+</html>

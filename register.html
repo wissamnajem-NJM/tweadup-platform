@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription - Tweadup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container" id="navbar-container"></div>
+    <div class="mobile-menu" id="mobile-menu"></div>
+  </nav>
+
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        <h1>Inscription</h1>
+        <p style="color:var(--gray-500);font-size:.875rem">Creez votre compte gratuitement</p>
+      </div>
+      <div id="alert-box"></div>
+      <form id="register-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Prenom</label>
+            <input type="text" class="form-input" id="prenom" required placeholder="Votre prenom">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom</label>
+            <input type="text" class="form-input" id="nom" required placeholder="Votre nom">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="email" required placeholder="votre@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mot de passe</label>
+          <input type="password" class="form-input" id="password" required placeholder="8 caracteres minimum">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmer le mot de passe</label>
+          <input type="password" class="form-input" id="password2" required placeholder="Confirmer">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%">S'inscrire</button>
+      </form>
+      <div class="auth-footer">
+        <p>Deja un compte ? <a href="login.html">Se connecter</a></p>
+        <p><a href="">Retour a l'accueil</a></p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (redirectIfAuth());
+
+    document.getElementById('register-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const prenom = document.getElementById('prenom').value;
+      const nom = document.getElementById('nom').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const password2 = document.getElementById('password2').value;
+      const alertBox = document.getElementById('alert-box');
+
+      if (password !== password2) {
+        alertBox.innerHTML = '<div class="alert alert-danger">Les mots de passe ne correspondent pas.</div>';
+        return;
+      }
+      if (password.length < 6) {
+        alertBox.innerHTML = '<div class="alert alert-danger">Le mot de passe doit contenir au moins 6 caracteres.</div>';
+        return;
+      }
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true; btn.textContent = 'Inscription...';
+
+      const result = await apiPost('/api/auth/register', { email, password, nom, prenom });
+
+      if (result && result.token) {
+        setAuth(result.token, result.user);
+        alertBox.innerHTML = '<div class="alert alert-success">Compte cree avec succes ! Redirection...</div>';
+        setTimeout(() => window.location.href = '/dashboard.html', 500);
+      } else {
+        alertBox.innerHTML = '<div class="alert alert-danger">' + (result?.error || 'Erreur lors de l\'inscription') + '</div>';
+        btn.disabled = false; btn.textContent = "S'inscrire";
+      }
+    });
+  </script>
+</body>
+</html>
